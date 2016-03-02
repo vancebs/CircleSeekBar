@@ -47,6 +47,12 @@ import com.hf.circleseekbar.R;
 public class CircleSeekBar extends ViewGroup {
     private static final int DEFAULT_PROGRESS_COLOR = 0xFF9999FF;
     private static final int DEFAULT_MAX_PROGRESS = 3600;
+    protected static int AREA_MAP[] = {
+            1, // 0
+            4, // 1
+            3, // 2
+            2  // 3
+    };
 
     protected int mCircleCount = 0;
 
@@ -58,18 +64,17 @@ public class CircleSeekBar extends ViewGroup {
     protected OnProgressListener mListener = null;
     protected RectF mRect = new RectF();
     protected Paint mPaint;
+    protected double mAngle = 0.0d;
 
     protected GestureDetector mGestureDetector;
     protected GestureDetector.OnGestureListener mGestureDetectorListener = new GestureDetector.SimpleOnGestureListener() {
         float mLastX = 0;
         float mLastY = 0;
-        double mLastAngle = 0.0d;
 
         @Override
         public boolean onDown(MotionEvent e) {
             mLastX = mSlider.getTranslationX();
             mLastY = mSlider.getTranslationY();
-            mLastAngle = progress2Angle(mProgress, mMaxProgress);
             return super.onDown(e);
         }
 
@@ -82,22 +87,6 @@ public class CircleSeekBar extends ViewGroup {
 
             double angle = Math.atan2(x, cy - y);
             setProgress(angle2Progress(angle, mMaxProgress));
-
-            // check whether circle count should be updated
-            int lastAngleArea = getAngleArea(mLastAngle);
-            int currAngleArea = getAngleArea(angle);
-            if (lastAngleArea == 1 && currAngleArea == 2) {
-                mCircleCount --;
-                if (mListener != null) {
-                    mListener.onCircleCountChanged(mCircleCount);
-                }
-            } else if (lastAngleArea == 2 && currAngleArea == 1) {
-                mCircleCount ++;
-                if (mListener != null) {
-                    mListener.onCircleCountChanged(mCircleCount);
-                }
-            }
-            mLastAngle = angle;
             return true;
         }
     };
@@ -199,12 +188,17 @@ public class CircleSeekBar extends ViewGroup {
     }
 
     protected void setAngle(double angle) {
+        mAngle = angle;
         double dx = mRadius * Math.sin(angle);
         double dy = mRadius * Math.cos(angle);
         float x = (float) dx;
         float y = (float) (mRadius - dy);
         mSlider.setTranslationX(x);
         mSlider.setTranslationY(y);
+    }
+
+    protected double getAngle() {
+        return mAngle;
     }
 
     protected double progress2Angle(int progress, int max) {
@@ -223,9 +217,30 @@ public class CircleSeekBar extends ViewGroup {
     public void setProgress(int progress) {
         if (mProgress != progress) {
             mProgress = progress;
-            setAngle(progress2Angle(mProgress, mMaxProgress));
+            double lastAngle = getAngle();
+            double currAngle = progress2Angle(mProgress, mMaxProgress);
+
+            // update angle and draw
+            setAngle(currAngle);
             invalidate();
 
+            // check whether circle count should be updated
+            int lastAngleArea = getAngleArea(lastAngle);
+            int currAngleArea = getAngleArea(currAngle);
+            android.util.Log.i("==MyTest==", "last: " + lastAngle + ", cur: " + currAngle + ", last: " + lastAngleArea + ", cur: " + currAngleArea);
+            if (lastAngleArea == 1 && currAngleArea == 2) {
+                mCircleCount --;
+                if (mListener != null) {
+                    mListener.onCircleCountChanged(mCircleCount);
+                }
+            } else if (lastAngleArea == 2 && currAngleArea == 1) {
+                mCircleCount ++;
+                if (mListener != null) {
+                    mListener.onCircleCountChanged(mCircleCount);
+                }
+            }
+
+            // onProgress
             if (mListener != null) {
                 mListener.onProgress(mProgress, mMaxProgress);
             }
@@ -264,16 +279,13 @@ public class CircleSeekBar extends ViewGroup {
     }
 
     private static int getAngleArea(double angle) {
-        final double PI_2 = Math.PI / 2.0d;
-        if (angle >= 0 && angle < PI_2) {
-            return 1;
-        } else if (angle >= -PI_2 && angle < 0) {
-            return 2;
-        } else if (angle >= -Math.PI && angle < -PI_2) {
-            return 3;
-        } else if (angle >= PI_2 && angle < Math.PI) {
-            return 4;
+        final double PI_2 = Math.PI + Math.PI;
+
+        while (angle < 0) {
+            angle += PI_2;
         }
-        return 0;
+        angle %= PI_2;
+
+        return AREA_MAP[(int)(angle * 2.0d / Math.PI)];
     }
 }
