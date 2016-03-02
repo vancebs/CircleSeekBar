@@ -227,7 +227,6 @@ public class CircleSeekBar extends ViewGroup {
             // check whether circle count should be updated
             int lastAngleArea = getAngleArea(lastAngle);
             int currAngleArea = getAngleArea(currAngle);
-            android.util.Log.i("==MyTest==", "last: " + lastAngle + ", cur: " + currAngle + ", last: " + lastAngleArea + ", cur: " + currAngleArea);
             if (lastAngleArea == 1 && currAngleArea == 2) {
                 mCircleCount --;
                 if (mListener != null) {
